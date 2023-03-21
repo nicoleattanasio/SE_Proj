@@ -2,7 +2,7 @@
 import os
 import re
 MAX_ACCOUNTS = 10
-MAX_JOBS = 5
+MAX_JOBS = 10
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 12
 
@@ -313,6 +313,7 @@ def add_account(username, password, first_name, last_name, uni, major):
   Add username, password, first name, and last name to account list
   """
   with open('accounts.txt', 'a') as f:
+    
     f.write("Username: " + username + "\n")
     f.write("Password: " + password + "\n")
     f.write("First Name: " + first_name + "\n")
@@ -322,17 +323,20 @@ def add_account(username, password, first_name, last_name, uni, major):
     f.write("University: " + uni + "\n")
     f.write("Major: " + major + "\n")
 
-def add_job(poster, title, description, employer, location, salary):
+def add_job(username, poster, title, description, employer, location, salary):
   """
   Add poster, title, description, employer, location, and salary to job list
   """
   with open('jobs.txt', 'a') as f:
+    f.write("User: " + username + "\n")
     f.write("Poster: " + poster + "\n")
     f.write("Title: " + title + "\n")
     f.write("Description: " + description + "\n")
     f.write("Employer: " + employer + "\n")
     f.write("Location: " + location + "\n")
     f.write("Salary: " + salary + "\n")
+    f.write("Applicants: " + "\n")
+    f.write("Saved: " + "\n")
 
 
 def additional_options(username):
@@ -359,7 +363,7 @@ def additional_options(username):
       except:
         print("Invalid choice")
         continue
-      if choice < 1 or choice > 10:
+      if choice < 1 or choice > 11:
         print("Invalid choice")
       else:
         break
@@ -970,36 +974,88 @@ def is_valid_password(password):
     return False
   return True
 
+#Delete a job in the job postings list
+def delete_job(username):
+  mjob = []
+  try:
+    f = open("jobs.txt", 'r')
+  except IOError:
+    print("No jobs listed\n")
+    f.close()
+    return
+  lines = f.readlines()
+  if len(lines) == 0: #return if number of jobs listed is 0
+    print("No jobs listed\n")
+    f.close()
+    return
+  f.close()
+  cnt = 0
+  #Find jobs listed by user
+  while cnt < len(lines):
+    mjob.append(lines[cnt])
+    cnt+=1
+  job_index = print_jobs(username, mjob, "user")
+  if len(job_index) == 0: #return if no job listed by user
+    print("No jobs listed\n")
+    return
+  #Ask user to choose what job to delete
+  while True:
+    try:
+      choice = int(input("Select job to delete or press 0 to return to previous page: "))
+    except:
+      print("Invalid choice")
+      continue
+    if choice == 0:
+      f.close()
+      return
+    elif choice < 1 or choice > len(job_index):
+      print("Invalid choice")
+    else:
+      break
+  cnt = 0
+  index = job_index[choice-1]
+  #Delete job from list
+  with open('jobs.txt', 'w') as f: 
+    while cnt < len(lines):
+      if cnt == index:
+        cnt+=9
+        continue
+      else:
+        f.write(lines[cnt])
+        cnt+=1
+  f.close()
+  
 
 def job_menu(username):
   """
   Display the job menu options
   """
-  print("\n--- Job Search/Internship ---")
-  print("1. Post a job")
-  print("2. Look for a job")
-  print("3. Return to previous page")
-  # checks if user input for choice is valid
   while True:
-    try:
-      choice = int(input("Enter your choice: "))
-    except:
-      print("Invalid choice")
-      continue
-    if choice < 1 or choice > 3:
-      print("Invalid choice")
-    else:
-      break
-  # does selected choice
-  if choice == 1:
-    post_job(username)
-    job_menu(username)
-  elif choice == 2:
-    #search_job(username)
-    print("Under construction")
-    job_menu(username)
-  elif choice == 3:
-    return
+    print("\n--- Job Search/Internship ---")
+    print("1. Post a job")
+    print("2. Look for a job")
+    print("3. Delete a job listing")
+    print("4. Return to previous page")
+    # checks if user input for choice is valid
+    while True:
+      try:
+        choice = int(input("Enter your choice: "))
+      except:
+        print("Invalid choice")
+        continue
+      if choice < 1 or choice > 6:
+        print("Invalid choice")
+      else:
+        break
+    # does selected choice
+    if choice == 1:
+      post_job(username)
+    elif choice == 2:
+      search_job(username)
+    elif choice == 3:
+      delete_job(username)
+    elif choice == 4:
+      return
 
     
 def login():
@@ -1082,12 +1138,12 @@ def post_job(username):
   # checks if maximum number of jobs have been posted
   with open('jobs.txt', 'r') as f:
     lines = f.readlines()
-  if len(lines)/6 >= MAX_JOBS:
+  if len(lines)/9>= MAX_JOBS:
     print("All permitted jobs have been posted, please come back later")
     return
   
   # gets user inputs for job information
-  print("--- Post New Job ---")
+  print("\n--- Post New Job ---")
   poster = get_account_value(username, "first name") + " " + get_account_value(username, "last name")
   title = input("Enter the job title: ")
   description = input("Enter the job description: ")
@@ -1101,42 +1157,388 @@ def post_job(username):
       print("Invalid salary")
   
   # adds job to job list
-  add_job(poster, title, description, employer, location, str(salary))
+  add_job(username, poster, title, description, employer, location, str(salary))
   print("Job posted successfully")
   return
-
-    
+  
+#Find a job in the job postings list
 def search_job(username):
   """
   Search for job from posted job list
   """
-  # sees if file exists or not, if not create file
+  mjob = []
   try:
     f = open("jobs.txt", 'r')
-    # file exists
     f.close
   except IOError:
-    f = open("jobs.txt", 'w+')
-    f.close
-  with open('jobs.txt', 'r') as f:
-    lines = f.readlines()
-
-  # if job list is empty, return to menu
-  if len(lines) <= 1:
-    print("No jobs posted")
+    print("No jobs listed\n")
     return
+  lines = f.readlines()
+  if len(lines) == 0: #return if number of jobs listed is 0
+    print("No jobs listed\n")
+    f.close()
+    return
+  f.close()
+  #choose desired list
+  print("\n--- List Selection ---")
+  print("1. View full list of jobs")
+  print("2. View list of applied jobs")
+  print("3. View list of unapplied jobs")
+  print("4. View list of saved jobs")
+  print("5. Return to previous page")
+  while True:
+    try:
+      choice = int(input("Enter your choice: "))
+    except:
+      print("Invalid choice")
+      continue
+    if choice == 0:
+      f.close()
+      return
+    elif choice < 1 or choice > 5:
+      print("Invalid choice")
+    else:
+      break
+  cnt = 0
+  #return to previous page
+  if choice == 5:
+    return
+  else:
+    while cnt < len(lines):
+      x = 0
+      while x < 7:
+        mjob.append(lines[cnt])
+        cnt+=1
+        x+=1
+      #check for applicant status
+      line = lines[cnt].split(": ", 1)
+      names = line[1].split(", ")
+      name_found = "False"
+      for name in names:
+        if name.strip("\n") == username:
+          name_found = "True"
+          break
+      mjob.append("Applicants: " + name_found)
+      cnt+=1
+      #check for saved status
+      line = lines[cnt].split(": ", 1)
+      names = line[1].split(", ")
+      name_found = "False"
+      for name in names:
+        if name.strip("\n") == username:
+          name_found = "True"
+          break
+      mjob.append("Saved: " + name_found)
+      cnt+=1
+  #print full job list
+  if choice == 1:
+    job_index = print_jobs(username, mjob, "full")
+  #print list of applied jobs
+  if choice == 2:
+    job_index = print_jobs(username, mjob, "applied")
+  #print list of unapplied jobs
+  if choice == 3:
+    job_index = print_jobs(username, mjob, "unapplied")
+  #print list of saved jobs
+  if choice == 4:
+    job_index = print_jobs(username, mjob, "saved")
+  #return if no jobs listed
+  if len(job_index) == 0: 
+    print("No jobs listed\n")
+    return
+  #select job to apply to or save
+  while True:
+    try:
+      choice = int(input("Enter your choice or press 0 to return to previous page: "))
+    except:
+      print("Invalid choice")
+      continue
+    if choice == 0:
+      return
+    elif choice < 1 or choice > len(job_index):
+      print("Invalid choice")
+    else:
+      break
+  index = job_index[choice-1]
+  #select choice for selected job
+  print("Press 1 to apply to job")
+  print("Press 2 to save/unsave job")
+  print("Press 0 to return to previous page")
+  cnt = 0
+  while True:
+    try:
+      choice = int(input("Enter your choice: "))
+    except:
+      print("Invalid choice")
+      continue
+    if choice == 0:
+      return
+    #apply to job
+    elif choice == 1:
+      newindex = index + 7
+      with open('jobs.txt', 'w') as f: 
+        while cnt < len(lines):
+          if cnt == index:
+            f.write(lines[cnt])
+            line = mjob[cnt].split(": ", 1)
+            #user is poster of job
+            if line[1] == username + "\n":
+              newindex = 0
+              print("You cannot apply to a job that you posted yourself")  
+          elif cnt == newindex:
+            line = mjob[cnt].split(": ", 1)
+            #user already in applicant list
+            if line[1] == "True":
+              f.write(lines[cnt])
+              print("Job already applied to")  
+            #user enters in appllication information
+            else:
+              while True:
+                grad_date = input("\nEnter your graduation date: ")
+                date = grad_date.split("/", 3)
+                if len(date) == 3:
+                  try:
+                    month = int(date[0])
+                    day = int(date[1])
+                    year = int(date[2])
+                  except:
+                    print("Invalid Format (MM/DD/YYYY)")
+                    continue
+                else:
+                  print("Invalid Format (MM/DD/YYYY)")
+                  continue
+                if len(date[0]) == 2 and len(date[1]) == 2 and len(date[2]) == 4:
+                  break
+                else:
+                  print("Invalid Format (MM/DD/YYYY)")
+              while True:
+                start_date = input("\nEnter your start date for working here: ")
+                date = start_date.split("/", 3)
+                if len(date) == 3:
+                  try:
+                    month = int(date[0])
+                    day = int(date[1])
+                    year = int(date[2])
+                  except:
+                    print("Invalid Format (MM/DD/YYYY)")
+                    continue
+                else:
+                  print("Invalid Format (MM/DD/YYYY)")
+                  continue
+                if len(date[0]) == 2 and len(date[1]) == 2 and len(date[2]) == 4:
+                  break
+                else:
+                  print("Invalid Format (MM/DD/YYYY)")
+              paragraph = input("\nEnter a paragraph explaining why you think that you would be a good fit for this job: ")
+              #add user to applicant list for selected job
+              line = lines[cnt].split(": ", 1)
+              if line[1] == "\n":
+                f.write(lines[cnt].strip("\n") + username + "\n")
+              else:
+                f.write(lines[cnt].strip("\n") + ", " + username + "\n")
+              print("Job successfully applied to") 
+          else:
+            f.write(lines[cnt])
+          cnt+=1
+        break
+    #save/unsave selected job
+    elif choice == 2:
+      newindex = index + 8
+      with open('jobs.txt', 'w') as f: 
+        while cnt < len(lines):
+          if cnt == newindex:
+            line = mjob[cnt].split(": ", 1)
+            #remove user from saved list for selected job
+            if line[1] == "True":
+              line = lines[cnt].split(": ", 1)
+              names = line[1].split(", ")
+              firstname = True
+              newline = "Saved: "
+              for name in names:
+                if name != username and name != username + "\n":
+                  if firstname == False:
+                    newline = newline + name
+                    firstname = True
+                  else:
+                    newline = newline + ", " + name
+              f.write(newline + "\n")
+              print("Job unsaved")
+            #add user to saved list for selected job
+            else:
+              line = lines[cnt].split(": ", 1)
+              if line[1] == "\n":
+                f.write(lines[cnt].strip("\n") + username + "\n")
+              else:
+                f.write(lines[cnt].strip("\n") + ", " + username + "\n")
+              print("Job saved") 
+          else:
+            f.write(lines[cnt])
+          cnt+=1
+        break
+    else:
+       print("Invalid choice")
+  f.close()
+
     
-  # displays posted job list
-  print("--- Posted Jobs ---")
-  i = 0
-  while i < len(lines):
-    print("Job Title: " + lines[i + 1].strip().split(": ")[1])
-    print("Job Description: " + lines[i + 2].strip().split(": ")[1])
-    print("Employer: " + lines[i + 3].strip().split(": ")[1])
-    print("Location: " + lines[i + 4].strip().split(": ")[1])
-    print("Salary: $" + lines[i + 5].strip().split(": ")[1])
-    print("--------------------")
-    i += 6
+#Print job postings list and return list of indexes for finding jobs in jobs.txt
+def print_jobs(user, mjob, list_type):
+  maxnum = 0
+  cnt = 0
+  job_index = []
+  name_found = False
+  #print full list of jobs
+  if list_type == "full":
+    for x in mjob:
+      line = x.split(": ", 1)
+      if line[0] == "User":
+        if maxnum == 0:
+          print("\n--- Full Job List ---")
+        else:
+            print("\n-----------------------")
+        job_index.append(cnt)
+        maxnum += 1
+      elif line[0] == "Poster":
+        cnt+=1
+        continue
+      elif line[0] == "Title":
+        print(str(maxnum) + ". " + x)
+      elif line[0] == "Applicants":
+        if line[1] == "True":
+          print("(JOB CURRENLTY APPLIED TO)\n")
+      elif line[0] == "Saved":
+        if line[1] == "True":
+          print("(SAVED JOB)\n")
+      else:
+        print(x)
+      cnt+=1
+  #print list of applied jobs
+  elif list_type == "applied":
+    for x in mjob:
+      line = x.split(": ", 1)
+      if line[0] == "User":
+        #check if user in applicant list
+        if mjob[cnt+7] == "Applicants: True":
+          if maxnum == 0:
+            print("\n--- Applied Job List ---")
+          else:
+            print("\n-----------------------")
+          job_index.append(cnt)
+          name_found = True
+          maxnum += 1
+        else:
+          name_found = False
+      elif line[0] == "Poster":
+        cnt+=1
+        continue
+      elif line[0] == "Title":
+        if name_found == True:
+          print(str(maxnum) + ". " + x)
+      elif line[0] == "Applicants":
+        cnt+=1
+        continue
+      elif line[0] == "Saved":
+        if name_found == True and line[1] == "True":
+          print("(SAVED JOB)")
+      else:
+        if name_found == True:
+          print(x)
+      cnt+=1
+  #print list of unapplied jobs
+  elif list_type == "unapplied":
+    for x in mjob:
+      line = x.split(": ", 1)
+      if line[0] == "User":
+        #check if user in applicant list
+        if mjob[cnt+7] != "Applicants: True":
+          if maxnum == 0:
+            print("\n--- Unapplied Job List ---")
+          else:
+            print("\n-----------------------")
+          job_index.append(cnt)
+          name_found = False
+          maxnum += 1
+        else:
+          name_found = True
+      elif line[0] == "Poster":
+        cnt+=1
+        continue
+      elif line[0] == "Title":
+        if name_found == False:
+          print(str(maxnum) + ". " + x)
+      elif line[0] == "Applicants":
+        cnt+=1
+        continue
+      elif line[0] == "Saved":
+        if name_found == False and line[1] == "True":
+          print("(SAVED JOB)\n")
+      else:
+        if name_found == False:
+          print(x)
+      cnt+=1
+  #print list of saved jobs
+  elif list_type == "saved":
+    for x in mjob:
+      line = x.split(": ", 1)
+      if line[0] == "User":
+        #check if user in applicant list
+        if mjob[cnt+8] == "Saved: True":
+          if maxnum == 0:
+            print("\n--- Saved Job List ---")
+          else:
+            print("\n-----------------------")
+          job_index.append(cnt)
+          name_found = True
+          maxnum += 1
+        else:
+          name_found = False
+      elif line[0] == "Poster":
+        cnt+=1
+        continue
+      elif line[0] == "Title":
+        if name_found == True:
+          print(str(maxnum) + ". " + x)
+      elif line[0] == "Applicants":
+        if name_found == True and line[1] == "True":
+          print("(JOB CURRENLTY APPLIED TO)\n")
+      elif line[0] == "Saved":
+        cnt+=1
+        continue
+      else:
+        if name_found == True:
+          print(x)
+      cnt+=1
+  #print list of jobs posted by user
+  elif list_type == "user":
+    for x in mjob:
+      line = x.split(": ", 1)
+      if line[0] == "User":
+        if line[1] == user + "\n":
+          if maxnum == 0:
+            print("\n--- Posted Job List ---")
+          else:
+            print("\n-----------------------")
+          job_index.append(cnt)
+          name_found = True
+          maxnum += 1
+        else:
+          name_found = False
+      elif line[0] == "Poster":
+        cnt+=1
+        continue
+      elif line[0] == "Title":
+        if name_found == True:
+          print(str(maxnum) + ". " + x)
+      elif line[0] == "Applicants":
+        cnt+=1
+        continue
+      elif line[0] == "Saved":
+        if line[1] == "True\n":
+          print("(SAVED JOB)")
+      else:
+        if name_found == True:
+          print(x)
+      cnt+=1
+  return job_index
   
   
 def skills_menu(username):
